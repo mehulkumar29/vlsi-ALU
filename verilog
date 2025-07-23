@@ -1,0 +1,27 @@
+module ALU (
+    input [3:0] A,    // 4-bit input A
+    input [3:0] B,    // 4-bit input B
+    input [2:0] ALUControl, // ALU operation control
+    output reg [3:0] ALUResult, // 4-bit ALU result
+    output reg Zero   // Zero flag
+);
+
+    always @ (A, B, ALUControl)
+    begin
+        case (ALUControl)
+            3'b000: ALUResult = A & B; // AND
+            3'b001: ALUResult = A | B; // OR
+            3'b010: ALUResult = A + B; // ADD
+            3'b011: ALUResult = A - B; // SUBTRACT
+            3'b100: ALUResult = A ^ B; // XOR
+            3'b101: ALUResult = ~(A | B); // NOR
+            default: ALUResult = 4'b0000; // Default case
+        endcase
+
+        // Zero flag logic
+        if (ALUResult == 4'b0000)
+            Zero = 1;
+        else
+            Zero = 0;
+    end
+endmodule
