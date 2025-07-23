@@ -1,0 +1,24 @@
+module RAM (
+    input clk,               // Clock signal
+    input [3:0] address,     // 4-bit address for 16 memory locations
+    input [7:0] data_in,     // 8-bit input data for writing
+    input we,                // Write Enable signal
+    input re,                // Read Enable signal
+    output reg [7:0] data_out // 8-bit output data for reading
+);
+
+    // Declare a memory array (16 words, 8 bits per word)
+    reg [7:0] memory [15:0]; // 16 locations, each 8 bits wide
+
+    // Process for reading and writing to memory
+    always @(posedge clk) begin
+        if (we) begin
+            // Write data to the specified address
+            memory[address] <= data_in;
+        end
+        if (re) begin
+            // Read data from the specified address
+            data_out <= memory[address];
+        end
+    end
+endmodule
