@@ -1,0 +1,101 @@
+module pipeline_processor(
+    input clk,
+    input rst
+);
+
+    // IF stage
+    wire [31:0] instruction_IF, pc_IF;
+    reg [31:0] pc_reg, next_pc;
+
+    // ID stage
+    wire [31:0] instruction_ID, rs_data, rt_data, imm_ext;
+    wire [4:0] rs_addr, rt_addr, rd_addr;
+    wire reg_write_ID, mem_read_ID, mem_to_reg_ID, alu_src_ID;
+    wire [2:0] alu_op_ID;
+    wire [5:0] opcode_ID, funct_ID;
+    
+    // EX stage
+    wire [31:0] alu_result, alu_in2;
+    wire zero, branch_taken;
+
+    // MEM stage
+    wire [31:0] mem_data;
+    
+    // WB stage
+    wire [31:0] write_data_WB;
+
+    // Control Unit
+    control_unit cu (
+        .opcode(opcode_ID),
+        .funct(funct_ID),
+        .reg_write(reg_write_ID),
+        .mem_read(mem_read_ID),
+        .mem_to_reg(mem_to_reg_ID),
+        .alu_src(alu_src_ID),
+        .alu_op(alu_op_ID)
+    );
+
+    // Register File
+    register_file rf (
+        .clk(clk),
+        .rst(rst),
+        .rs_addr(rs_addr),
+        .rt_addr(rt_addr),
+        .rd_addr(rd_addr),
+        .rd_data(write_data_WB),
+        .rs_data(rs_data),
+        .rt_data(rt_data),
+        .reg_write(reg_write_ID)
+    );
+
+    // ALU
+    alu alu_unit (
+        .a(rs_data),
+        .b(alu_in2),
+        .alu_op(alu_op_ID),
+        .result(alu_result),
+        .zero(zero)
+    );
+
+    // Data Memory
+    data_memory data_mem (
+        .clk(clk),
+        .mem_read(mem_read_ID),
+        .mem_write(mem_write_ID),
+        .address(alu_result),
+        .write_data(rt_data),
+        .read_data(mem_data)
+    );
+
+    // IF Stage: Instruction Fetch
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            pc_reg <= 32'b0;
+        else
+            pc_reg <= next_pc;
+    end
+
+    assign pc_IF = pc_reg;
+    instruction_memory inst_mem (
+        .address(pc_IF),
+        .instruction(instruction_IF)
+    );
+
+    // ID Stage: Instruction Decode
+    assign opcode_ID = instruction_IF[31:26];
+    assign rs_addr = instruction_IF[25:21];
+    assign rt_addr = instruction_IF[20:16];
+    assign rd_addr = instruction_IF[15:11];
+    assign imm_ext = {{16{instruction_IF[15]}}, instruction_IF[15:0]};
+
+    // EX Stage: ALU Operation
+    assign alu_in2 = alu_src_ID ? imm_ext : rt_data;
+    assign branch_taken = (zero && branch) ? 1 : 0;
+
+    // MEM Stage: Data Memory Access
+    assign write_data_WB = mem_to_reg_ID ? mem_data : alu_result;
+
+    // IF Stage: Next Program Counter
+    assign next_pc = branch_taken ? (pc_reg + imm_ext) : (pc_reg + 4);
+
+endmodule
